@@ -1,0 +1,83 @@
+name: GitHub Actions Demo
+on: 
+  pull_request:
+    types: [closed]
+    paths:
+      - "output/**"
+jobs:
+  copy-proto-files:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get branch variables
+        id: get-branch-name
+        run: |
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          TIMESTAMP=$(date +%s)
+          BRANCH_NAME_TIME="$BRANCH_NAME-$TIMESTAMP"
+          BRANCH_NAME_TIME_REF="refs/heads/$BRANCH_NAME_TIME"
+
+          echo $BRANCH_NAME
+          echo ${{github.event.pull_request.head.commit_message}}
+
+          echo "::set-output name=branch_name_time::$BRANCH_NAME_TIME"
+          echo "::set-output name=branch_name_time_ref::$BRANCH_NAME_TIME_REF"
+
+      - name: Checkout Backend
+        uses: actions/checkout@v2
+        with:
+          path: "./backend"
+          ref: '${{ github.ref }}'
+      
+      - name: Get commit message Backend
+        id: get-commit-message
+        run: |
+          cd ./backend
+          MSG=$(git log --format=%B -n 1 HEAD)
+          echo "::set-output name=COMMIT_MESSAGE::${MSG}"
+          cd ..
+
+      - name: Checkout Dart
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          repository: quangngocmanabie/dart
+          path: './dart'
+
+      - name: Copy folder
+        id: copy-folder
+        run: |
+          cd ./dart
+          
+          git config --local user.email "builamquangngoc91@gmail.com"
+          git config --local user.name "builamquangngoc91"
+
+          git checkout -b ${{ steps.get-branch-name.outputs.branch_name_time }}
+
+          rm -rf ./output
+          cp -R ./../backend/output ./
+          
+          git add .
+          git commit -m "${{ steps.get-commit-message.outputs.COMMIT_MESSAGE }}"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: "${{ secrets.PAT }}"
+          repository: quangngocmanabie/dart
+          branch: "${{ steps.get-branch-name.outputs.branch_name_time_ref }}"
+          directory: "./dart"
+      
+      - name: Checkout main
+        if: ${{ github.base_ref == 'main' }}
+        run: |
+          cd ./dart
+          git checkout main
+    
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        if: ${{ github.base_ref == 'main' }}
+        with:
+          branch: ${{ steps.get-branch-name.outputs.branch_name_time_ref }}
+          path: "./dart"
+          token: "${{ secrets.PAT }}"
