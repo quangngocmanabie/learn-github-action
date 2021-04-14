@@ -1,12 +1,13 @@
 name: GitHub Actions Demo
 on: 
   pull_request:
+    types: [closed]
     paths:
       - "output/**"
 jobs:
   copy-proto-files:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     steps:
       - name: Get branch variables
         id: get-branch-name
