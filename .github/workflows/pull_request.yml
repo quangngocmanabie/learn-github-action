@@ -1,6 +1,7 @@
 name: GitHub Actions Demo
 on: 
   pull_request:
+    types: [closed]
     paths:
       - "output/**"
 jobs:
@@ -15,9 +16,6 @@ jobs:
           TIMESTAMP=$(date +%s)
           BRANCH_NAME_TIME="$BRANCH_NAME-$TIMESTAMP"
           BRANCH_NAME_TIME_REF="refs/heads/$BRANCH_NAME_TIME"
-
-          echo $BRANCH_NAME
-          echo ${{github.event.pull_request.head.commit_message}}
 
           echo "::set-output name=branch_name_time::$BRANCH_NAME_TIME"
           echo "::set-output name=branch_name_time_ref::$BRANCH_NAME_TIME_REF"
